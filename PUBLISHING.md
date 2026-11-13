@@ -8,10 +8,15 @@
 ## Готовая команда
 
 ```powershell
-winget install --id GitHub.cli                     # один раз, затем перезапустить терминал
-gh auth login --web --git-protocol https           # авторизация в браузере
+winget install --id GitHub.cli                     # один раз, если gh ещё не установлен
+& "C:\Program Files\GitHub CLI\gh.exe" auth login --hostname github.com --web --git-protocol https
 powershell -ExecutionPolicy Bypass -File scripts\publish_github.ps1 -Owner ZAFSNB -Repo knigamag-lab4 -Visibility public
 ```
+
+Если терминал был открыт **до** установки GitHub CLI, короткая команда `gh` в нём
+не находится (системный PATH ещё не прочитан). Поэтому авторизация выше использует
+полный путь к `gh.exe`, а сценарий `publish_github.ps1` самостоятельно находит
+`gh.exe` через системный PATH — перезапускать терминал необязательно.
 
 Сценарий создаст репозиторий, отправит код, включит Pages из `main:/docs`
 и загрузит 7 страниц Wiki. Если Wiki ещё не создавалась, он выведет подсказку:

@@ -36,18 +36,28 @@ if (-not $NoCommit) { git commit -m "Lab 4: requirements, DB model, OpenAPI 3.0,
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
 
 Write-Host "==> 3/6  Проверка GitHub CLI и авторизации" -ForegroundColor Cyan
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-  throw "GitHub CLI не найден. Установите: winget install --id GitHub.cli  (затем перезапустите терминал)"
+# gh может быть установлен, но отсутствовать в PATH уже открытого терминала.
+$gh = $null
+$cmd = Get-Command gh -ErrorAction SilentlyContinue
+if ($cmd) { $gh = $cmd.Source }
+if (-not $gh) {
+  foreach ($dir in ([Environment]::GetEnvironmentVariable('Path','Machine') -split ';')) {
+    if (-not $dir) { continue }
+    $candidate = Join-Path $dir 'gh.exe'
+    if (Test-Path $candidate) { $gh = $candidate; break }
+  }
 }
-& gh auth status 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) { & gh auth login --web --git-protocol https }
+if (-not $gh) { throw "GitHub CLI не найден. Установите: winget install --id GitHub.cli" }
+Write-Host "    gh -> $gh" -ForegroundColor Gray
+& $gh auth status 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) { & $gh auth login --hostname github.com --web --git-protocol https }
 if ($LASTEXITCODE -ne 0) { throw "Авторизация GitHub не выполнена" }
 
 Write-Host "==> 4/6  Создание репозитория и отправка кода" -ForegroundColor Cyan
-& gh repo view "$Owner/$Repo" 2>&1 | Out-Null
+& $gh repo view "$Owner/$Repo" 2>&1 | Out-Null
 $exists = ($LASTEXITCODE -eq 0)
 if (-not $exists) {
-  & gh repo create "$Owner/$Repo" --$Visibility --source=. --remote=origin --push
+  & $gh repo create "$Owner/$Repo" --$Visibility --source=. --remote=origin --push
 } else {
   & git remote get-url origin 2>&1 | Out-Null
   if ($LASTEXITCODE -ne 0) { & git remote add origin "https://github.com/$Owner/$Repo.git" }
@@ -56,10 +66,10 @@ if (-not $exists) {
 if ($LASTEXITCODE -ne 0) { throw "Не удалось отправить код" }
 
 Write-Host "==> 5/6  Включение GitHub Pages (branch $branch, /docs)" -ForegroundColor Cyan
-& gh api -X POST "repos/$Owner/$Repo/pages" `
+& $gh api -X POST "repos/$Owner/$Repo/pages" `
   -f "source[branch]=$branch" -f "source[path]=/docs" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
-  & gh api -X PUT "repos/$Owner/$Repo/pages" `
+  & $gh api -X PUT "repos/$Owner/$Repo/pages" `
     -f "source[branch]=$branch" -f "source[path]=/docs" 2>&1 | Out-Null
 }
 if ($LASTEXITCODE -ne 0) {
