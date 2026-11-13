@@ -1,0 +1,32 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Node / сборка
+node_modules/
+dist/
+.vite/
+
+# IDE и ОС
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
+
+# Локальные артефакты
+*.log
+.pytest_cache/
+.coverage
+
+# Jekyll / GitHub Pages (локальная сборка)
+_site/
+.jekyll-cache/
+.jekyll-metadata

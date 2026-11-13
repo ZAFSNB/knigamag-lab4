@@ -1,0 +1,20 @@
+@startmindmap
+* КнигаМаг (репозиторий)
+** README.md, PUBLISHING.md, .gitignore
+** .github/workflows/ci.yml
+** scripts/publish_github.ps1
+** requirements/
+*** requirements-model.md, use-case-registry.md
+** db/
+*** logical-model.md, schema.sql
+** api/
+*** routes.md, endpoints.md, requests.md
+*** openapi.yaml, mock_server.py, test_mock.py
+*** mock_test_results.md
+** assets/
+*** 3 диаграммы (.puml + .png)
+** wiki/ (7 страниц Markdown)
+** docs/ (GitHub Pages)
+*** index.md, _config.yml, presentation.md
+*** 7 зеркал wiki + assets/
+@endmindmap

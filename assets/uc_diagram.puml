@@ -1,0 +1,40 @@
+@startuml uc_diagram
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+skinparam dpi 120
+skinparam usecase {
+  BackgroundColor #E7F0FA
+  BorderColor #1F3A5F
+  FontSize 16
+}
+hide empty description
+title Диаграмма вариантов использования «КнигаМаг» (ЛР 4)
+left to right direction
+rectangle "КнигаМаг REST API — бизнес-сценарии (UC-1 … UC-8)" {
+  usecase "UC-1 Поиск книги\n<size:12>[G, P]</size>" as U01
+  usecase "UC-2 Оформление заказа\n<size:12>[P, PG]</size>" as U02
+  usecase "UC-3 Покупка без регистрации\n<size:12>[G]</size>" as U03
+  usecase "UC-4 Предзаказ и подписка\n<size:12>[P]</size>" as U04
+  usecase "UC-5 Избранное\n<size:12>[P]</size>" as U05
+  usecase "UC-6 Отзыв и оценка\n<size:12>[P, A]</size>" as U06
+  usecase "UC-7 Статус заказа\n<size:12>[P, M]</size>" as U07
+  usecase "UC-8 Обработка заказа\n<size:12>[M]</size>" as U08
+}
+rectangle "КнигаМаг REST API — API-сценарии (UC-9 … UC-16)" {
+  usecase "UC-9 Управление каталогом\n<size:12>[A]</size>" as U09
+  usecase "UC-10 Регистрация и вход\n<size:12>[G, U]</size>" as U10
+  usecase "UC-11 Аутентификация JWT\n<size:12>[P, M, A]</size>" as U11
+  usecase "UC-12 Корзина через API\n<size:12>[P]</size>" as U12
+  usecase "UC-13 Коллекции ресурсов\n<size:12>[APP]</size>" as U13
+  usecase "UC-14 Обновление токена\n<size:12>[P, M, A]</size>" as U14
+  usecase "UC-15 Webhook оплаты\n<size:12>[PG]</size>" as U15
+  usecase "UC-16 Справочники каталога\n<size:12>[A]</size>" as U16
+}
+legend right
+  <b>Акторы:</b> G — Гость, P — Покупатель, U — Пользователь,
+  M — Менеджер, A — Администратор, PG — Платёжный шлюз,
+  APP — Клиентское приложение.
+  Полные формулировки UC, пре- и постусловия, а также текстовые
+  сценарии приведены в реестре вариантов использования.
+end legend
+@enduml

@@ -1,0 +1,4579 @@
+openapi: 3.0.3
+servers:
+- url: https://virtserver.swaggerhub.com/<ACCOUNT>/knigamag-api/1.0.0
+  description: SwaggerHub API Auto Mocking (заменить <ACCOUNT> на имя аккаунта)
+- url: http://localhost:8080
+  description: Локальный Mock-сервер (api/mock_server.py)
+- url: https://api.knigamag.by
+  description: Промышленный сервер (план развёртывания)
+info:
+  title: КнигаМаг — REST API
+  version: 1.0.0
+  description: 'Спецификация REST API книжного онлайн-магазина «КнигаМаг» (knigamag.by). Лабораторная работа № 4, задания
+    1–4, группа 13. Входные данные — требования, варианты использования и ER-модель лабораторной работы № 3. Стек: Python
+    3.12 / Django 5 / Django REST Framework.'
+  contact:
+    email: student@bsu.by
+    name: Студент группы 13
+  license:
+    name: Учебный проект БГУ
+tags:
+- name: auth
+  description: Регистрация, вход, JWT-токены и профиль
+- name: catalog
+  description: Каталог книг и справочники
+- name: reviews
+  description: Отзывы и оценки
+- name: cart
+  description: Корзина покупателя
+- name: favorites
+  description: Избранное
+- name: orders
+  description: Заказы и их статусы
+- name: payments
+  description: Оплата и webhook платёжного шлюза
+- name: preorders
+  description: Предзаказы новинок
+- name: subscriptions
+  description: Подписки на издательства
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - auth
+      summary: Регистрация пользователя
+      description: Создаёт учётную запись с ролью customer и возвращает пару JWT-токенов.
+      operationId: post_auth_register
+      security:
+      - {}
+      requestBody:
+        required: true
+        description: Тело запроса RegisterRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              username: maria
+              email: maria@example.com
+              password: Str0ngPass!
+              phone: '+375291234567'
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9.access
+                refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+                tokenType: Bearer
+                expiresIn: 3600
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/auth/login:
+    post:
+      tags:
+      - auth
+      summary: Вход в систему
+      description: Проверяет учётные данные и выдаёт access- и refresh-токены.
+      operationId: post_auth_login
+      security:
+      - {}
+      requestBody:
+        required: true
+        description: Тело запроса LoginRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: maria
+              password: Str0ngPass!
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9.access
+                refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+                tokenType: Bearer
+                expiresIn: 3600
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - auth
+      summary: Обновление токена доступа
+      description: Выдаёт новую пару токенов по действительному refresh-токену; старый токен отзывается.
+      operationId: post_auth_refresh
+      security:
+      - {}
+      requestBody:
+        required: true
+        description: Тело запроса RefreshRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9.access
+                refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+                tokenType: Bearer
+                expiresIn: 3600
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Выход из системы
+      description: Отзывает refresh-токен; access-токен остаётся действительным до истечения срока.
+      operationId: post_auth_logout
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса RefreshRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/users/me:
+    get:
+      tags:
+      - auth
+      summary: Профиль текущего пользователя
+      description: Профиль текущего пользователя.
+      operationId: get_users_me
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 2
+                username: maria
+                email: maria@example.com
+                role: customer
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/roles:
+    get:
+      tags:
+      - auth
+      summary: Список ролей
+      description: Список ролей.
+      operationId: get_roles
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 1
+                  name: manager
+                  permissions:
+                  - orders.change
+                  - orders.view
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/books:
+    get:
+      tags:
+      - catalog
+      summary: Список книг с фильтрацией и пагинацией
+      description: Возвращает страницу коллекции книг; поддерживает поиск, фильтры и сортировку (ФТ-1, ФТ-2).
+      operationId: get_books
+      parameters:
+      - name: q
+        in: query
+        required: false
+        description: Поиск по названию, автору, ISBN
+        schema:
+          type: string
+      - name: authorId
+        in: query
+        required: false
+        description: Фильтр по автору
+        schema:
+          type: string
+      - name: publisherId
+        in: query
+        required: false
+        description: Фильтр по издательству
+        schema:
+          type: string
+      - name: topicId
+        in: query
+        required: false
+        description: Фильтр по тематике
+        schema:
+          type: string
+      - name: minPrice
+        in: query
+        required: false
+        description: Минимальная цена
+        schema:
+          type: string
+      - name: maxPrice
+        in: query
+        required: false
+        description: Максимальная цена
+        schema:
+          type: string
+      - name: availability
+        in: query
+        required: false
+        description: 'Наличие: in_stock / out_of_stock / preorder'
+        schema:
+          type: string
+      - name: sort
+        in: query
+        required: false
+        description: 'Сортировка: relevance, price, rating, novelty'
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: Номер страницы (по умолчанию 1)
+        schema:
+          type: string
+      - name: perPage
+        in: query
+        required: false
+        description: Размер страницы (по умолчанию 20)
+        schema:
+          type: string
+      security:
+      - {}
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 1
+                  title: Чистый код
+                  isbn: '9780132350884'
+                  price: 52.0
+                  rating: 4.8
+                  availability: in_stock
+                  description: Руководство по написанию чистого кода.
+                  authorId: 1
+                  publisherId: 1
+                  topicId: 1
+                  createdAt: '2026-09-01T10:00:00Z'
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+        '503':
+          description: Сервис поиска временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '503'
+                message: Сервис поиска временно недоступен
+                details: []
+    post:
+      tags:
+      - catalog
+      summary: Добавить книгу в каталог
+      description: Создаёт карточку книги; дублирование ISBN отклоняется с кодом 409.
+      operationId: post_books
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса BookCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreate'
+            example:
+              title: Чистый код
+              isbn: '9780132350884'
+              price: 52.0
+              availability: in_stock
+              description: Руководство по написанию чистого кода.
+              authorId: 1
+              publisherId: 1
+              topicId: 1
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              example:
+                id: 1
+                title: Чистый код
+                isbn: '9780132350884'
+                price: 52.0
+                rating: 4.8
+                availability: in_stock
+                description: Руководство по написанию чистого кода.
+                authorId: 1
+                publisherId: 1
+                topicId: 1
+                createdAt: '2026-09-01T10:00:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/books/{bookId}:
+    get:
+      tags:
+      - catalog
+      summary: Карточка книги
+      description: Карточка книги.
+      operationId: get_books_bookId
+      parameters:
+      - name: bookId
+        in: path
+        required: true
+        description: Идентификатор книги
+        schema:
+          type: integer
+      security:
+      - {}
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              example:
+                id: 1
+                title: Чистый код
+                isbn: '9780132350884'
+                price: 52.0
+                rating: 4.8
+                availability: in_stock
+                description: Руководство по написанию чистого кода.
+                authorId: 1
+                publisherId: 1
+                topicId: 1
+                createdAt: '2026-09-01T10:00:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+        '503':
+          description: Сервис поиска временно недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '503'
+                message: Сервис поиска временно недоступен
+                details: []
+    put:
+      tags:
+      - catalog
+      summary: Обновить карточку книги
+      description: Обновить карточку книги.
+      operationId: put_books_bookId
+      parameters:
+      - name: bookId
+        in: path
+        required: true
+        description: Идентификатор книги
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса BookCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreate'
+            example:
+              title: Чистый код
+              isbn: '9780132350884'
+              price: 52.0
+              availability: in_stock
+              description: Руководство по написанию чистого кода.
+              authorId: 1
+              publisherId: 1
+              topicId: 1
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              example:
+                id: 1
+                title: Чистый код
+                isbn: '9780132350884'
+                price: 52.0
+                rating: 4.8
+                availability: in_stock
+                description: Руководство по написанию чистого кода.
+                authorId: 1
+                publisherId: 1
+                topicId: 1
+                createdAt: '2026-09-01T10:00:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    delete:
+      tags:
+      - catalog
+      summary: Удалить книгу из каталога
+      description: Удаление запрещено, если книга входит в заказы (409, ФТ-10).
+      operationId: delete_books_bookId
+      parameters:
+      - name: bookId
+        in: path
+        required: true
+        description: Идентификатор книги
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/authors:
+    get:
+      tags:
+      - catalog
+      summary: Список авторов
+      description: Список авторов.
+      operationId: get_authors
+      security:
+      - {}
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Author'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 1
+                  firstName: Роберт
+                  lastName: Мартин
+                  biography: Автор «Чистого кода».
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    post:
+      tags:
+      - catalog
+      summary: Добавить автора
+      description: Добавить автора.
+      operationId: post_authors
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса AuthorCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorCreate'
+            example:
+              firstName: Роберт
+              lastName: Мартин
+              biography: Автор «Чистого кода».
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+              example:
+                id: 1
+                firstName: Роберт
+                lastName: Мартин
+                biography: Автор «Чистого кода».
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/publishers:
+    get:
+      tags:
+      - catalog
+      summary: Список издательств
+      description: Список издательств.
+      operationId: get_publishers
+      security:
+      - {}
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Publisher'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 1
+                  name: Питер
+                  address: Минск, ул. Примерная, 1
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    post:
+      tags:
+      - catalog
+      summary: Добавить издательство
+      description: Добавить издательство.
+      operationId: post_publishers
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса PublisherCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublisherCreate'
+            example:
+              name: Питер
+              address: Минск, ул. Примерная, 1
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publisher'
+              example:
+                id: 1
+                name: Питер
+                address: Минск, ул. Примерная, 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/topics:
+    get:
+      tags:
+      - catalog
+      summary: Список тематик
+      description: Список тематик.
+      operationId: get_topics
+      security:
+      - {}
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Topic'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 1
+                  name: Программирование
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    post:
+      tags:
+      - catalog
+      summary: Добавить тематику
+      description: Добавить тематику.
+      operationId: post_topics
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса TopicCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+            example:
+              name: Программирование
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+              example:
+                id: 1
+                name: Программирование
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/books/{bookId}/reviews:
+    get:
+      tags:
+      - reviews
+      summary: Отзывы о книге
+      description: Отзывы о книге.
+      operationId: get_books_bookId_reviews
+      parameters:
+      - name: bookId
+        in: path
+        required: true
+        description: Идентификатор книги
+        schema:
+          type: integer
+      security:
+      - {}
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 7
+                  bookId: 1
+                  userId: 2
+                  text: Полезная книга, рекомендую.
+                  rating: 5
+                  createdAt: '2026-10-05'
+                  moderated: true
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    post:
+      tags:
+      - reviews
+      summary: Оставить отзыв и оценку
+      description: Отзыв доступен только для доставленных книг; рейтинг книги пересчитывается (ФТ-9).
+      operationId: post_books_bookId_reviews
+      parameters:
+      - name: bookId
+        in: path
+        required: true
+        description: Идентификатор книги
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса ReviewCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+            example:
+              text: Полезная книга, рекомендую.
+              rating: 5
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+              example:
+                id: 7
+                bookId: 1
+                userId: 2
+                text: Полезная книга, рекомендую.
+                rating: 5
+                createdAt: '2026-10-05'
+                moderated: true
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/reviews/{reviewId}:
+    patch:
+      tags:
+      - reviews
+      summary: Модерация отзыва
+      description: Модерация отзыва.
+      operationId: patch_reviews_reviewId
+      parameters:
+      - name: reviewId
+        in: path
+        required: true
+        description: Идентификатор отзыва
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса ReviewModeration
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewModeration'
+            example:
+              moderated: true
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+              example:
+                id: 7
+                bookId: 1
+                userId: 2
+                text: Полезная книга, рекомендую.
+                rating: 5
+                createdAt: '2026-10-05'
+                moderated: true
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/cart:
+    get:
+      tags:
+      - cart
+      summary: Состав корзины
+      description: Состав корзины.
+      operationId: get_cart
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+              example:
+                id: 3
+                userId: 2
+                total: 84.5
+                items:
+                - id: 11
+                  bookId: 1
+                  quantity: 1
+                  price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    delete:
+      tags:
+      - cart
+      summary: Очистить корзину
+      description: Очистить корзину.
+      operationId: delete_cart
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/cart/items:
+    post:
+      tags:
+      - cart
+      summary: Добавить книгу в корзину
+      description: Добавить книгу в корзину.
+      operationId: post_cart_items
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса CartItemCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemCreate'
+            example:
+              bookId: 1
+              quantity: 1
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+              example:
+                id: 11
+                bookId: 1
+                quantity: 1
+                price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/cart/items/{itemId}:
+    put:
+      tags:
+      - cart
+      summary: Изменить количество
+      description: Изменить количество.
+      operationId: put_cart_items_itemId
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: Идентификатор позиции корзины
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса CartItemUpdate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemUpdate'
+            example:
+              quantity: 2
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+              example:
+                id: 11
+                bookId: 1
+                quantity: 1
+                price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    delete:
+      tags:
+      - cart
+      summary: Удалить позицию корзины
+      description: Удалить позицию корзины.
+      operationId: delete_cart_items_itemId
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        description: Идентификатор позиции корзины
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/favorites:
+    get:
+      tags:
+      - favorites
+      summary: Список избранного
+      description: Список избранного.
+      operationId: get_favorites
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Favorite'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 5
+                  userId: 2
+                  bookId: 1
+                  addedAt: '2026-10-11'
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    post:
+      tags:
+      - favorites
+      summary: Добавить в избранное
+      description: Добавить в избранное.
+      operationId: post_favorites
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса FavoriteCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteCreate'
+            example:
+              bookId: 1
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Favorite'
+              example:
+                id: 5
+                userId: 2
+                bookId: 1
+                addedAt: '2026-10-11'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/favorites/{favoriteId}:
+    delete:
+      tags:
+      - favorites
+      summary: Удалить из избранного
+      description: Удалить из избранного.
+      operationId: delete_favorites_favoriteId
+      parameters:
+      - name: favoriteId
+        in: path
+        required: true
+        description: Идентификатор записи избранного
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders:
+    post:
+      tags:
+      - orders
+      summary: Оформить заказ из корзины
+      description: Создаёт заказ со статусом pending_payment и позициями из корзины (ФТ-4).
+      operationId: post_orders
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса OrderCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+            example:
+              address: Минск, пр. Независимости, 4
+              paymentMethod: card
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 1024
+                number: KM-1024
+                userId: 2
+                address: Минск, пр. Независимости, 4
+                total: 84.5
+                status: paid
+                createdAt: '2026-10-13T14:20:00Z'
+                items:
+                - id: 21
+                  orderId: 1024
+                  bookId: 1
+                  quantity: 1
+                  price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    get:
+      tags:
+      - orders
+      summary: Список заказов
+      description: Список заказов.
+      operationId: get_orders
+      parameters:
+      - name: status
+        in: query
+        required: false
+        description: Фильтр по статусу
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: Номер страницы
+        schema:
+          type: string
+      - name: perPage
+        in: query
+        required: false
+        description: Размер страницы
+        schema:
+          type: string
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 1024
+                  number: KM-1024
+                  userId: 2
+                  address: Минск, пр. Независимости, 4
+                  total: 84.5
+                  status: paid
+                  createdAt: '2026-10-13T14:20:00Z'
+                  items:
+                  - id: 21
+                    orderId: 1024
+                    bookId: 1
+                    quantity: 1
+                    price: 52.0
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders/guest:
+    post:
+      tags:
+      - orders
+      summary: Быстрый заказ без регистрации
+      description: Заказ создаётся по контактным данным без учётной записи (ФТ-5).
+      operationId: post_orders_guest
+      security:
+      - {}
+      requestBody:
+        required: true
+        description: Тело запроса GuestOrderCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestOrderCreate'
+            example:
+              contactEmail: olga@example.com
+              contactPhone: '+375291112233'
+              address: Гродно, ул. Советская, 8
+              paymentMethod: card
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 1024
+                number: KM-1024
+                userId: 2
+                address: Минск, пр. Независимости, 4
+                total: 84.5
+                status: paid
+                createdAt: '2026-10-13T14:20:00Z'
+                items:
+                - id: 21
+                  orderId: 1024
+                  bookId: 1
+                  quantity: 1
+                  price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders/{orderId}:
+    get:
+      tags:
+      - orders
+      summary: Карточка заказа
+      description: Карточка заказа.
+      operationId: get_orders_orderId
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Идентификатор заказа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 1024
+                number: KM-1024
+                userId: 2
+                address: Минск, пр. Независимости, 4
+                total: 84.5
+                status: paid
+                createdAt: '2026-10-13T14:20:00Z'
+                items:
+                - id: 21
+                  orderId: 1024
+                  bookId: 1
+                  quantity: 1
+                  price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders/{orderId}/items:
+    get:
+      tags:
+      - orders
+      summary: Позиции заказа
+      description: Позиции заказа.
+      operationId: get_orders_orderId_items
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Идентификатор заказа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderItem'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 21
+                  orderId: 1024
+                  bookId: 1
+                  quantity: 1
+                  price: 52.0
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders/{orderId}/status-history:
+    get:
+      tags:
+      - orders
+      summary: История статусов заказа
+      description: История статусов заказа.
+      operationId: get_orders_orderId_status-history
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Идентификатор заказа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StatusHistoryEntry'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 31
+                  orderId: 1024
+                  status: paid
+                  changedAt: '2026-10-13T14:25:00Z'
+                  changedBy: 3
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders/{orderId}/status:
+    patch:
+      tags:
+      - orders
+      summary: Изменить статус заказа
+      description: Переводит заказ по статусам до передачи в доставку и пишет историю (ФТ-8).
+      operationId: patch_orders_orderId_status
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Идентификатор заказа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса OrderStatusUpdate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusUpdate'
+            example:
+              status: assembled
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example:
+                id: 1024
+                number: KM-1024
+                userId: 2
+                address: Минск, пр. Независимости, 4
+                total: 84.5
+                status: paid
+                createdAt: '2026-10-13T14:20:00Z'
+                items:
+                - id: 21
+                  orderId: 1024
+                  bookId: 1
+                  quantity: 1
+                  price: 52.0
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/orders/{orderId}/payment:
+    post:
+      tags:
+      - payments
+      summary: Инициировать оплату
+      description: Инициировать оплату.
+      operationId: post_orders_orderId_payment
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: Идентификатор заказа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса PaymentInit
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInit'
+            example:
+              method: card
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              example:
+                id: 9
+                orderId: 1024
+                amount: 84.5
+                method: card
+                status: confirmed
+                externalId: ps-8891
+                paidAt: '2026-10-13T14:25:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+        '502':
+          description: Платёжный шлюз недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '502'
+                message: Платёжный шлюз недоступен
+                details: []
+  /api/v1/payments/{paymentId}:
+    get:
+      tags:
+      - payments
+      summary: Статус платежа
+      description: Статус платежа.
+      operationId: get_payments_paymentId
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        description: Идентификатор платежа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              example:
+                id: 9
+                orderId: 1024
+                amount: 84.5
+                method: card
+                status: confirmed
+                externalId: ps-8891
+                paidAt: '2026-10-13T14:25:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/payments/webhook:
+    post:
+      tags:
+      - payments
+      summary: Webhook подтверждения оплаты
+      description: Принимает результат оплаты с HMAC-подписью, идемпотентно переводит заказ в «Оплачен».
+      operationId: post_payments_webhook
+      security:
+      - webhookSignature: []
+      requestBody:
+        required: true
+        description: Тело запроса PaymentWebhook
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentWebhook'
+            example:
+              externalId: ps-8891
+              orderId: 1024
+              status: confirmed
+              signature: sha256=9f2c...
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              example:
+                id: 9
+                orderId: 1024
+                amount: 84.5
+                method: card
+                status: confirmed
+                externalId: ps-8891
+                paidAt: '2026-10-13T14:25:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+        '502':
+          description: Платёжный шлюз недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '502'
+                message: Платёжный шлюз недоступен
+                details: []
+  /api/v1/preorders:
+    get:
+      tags:
+      - preorders
+      summary: Список предзаказов
+      description: Список предзаказов.
+      operationId: get_preorders
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Запрос выполнен, ресурс возвращён или обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Preorder'
+                  page:
+                    type: integer
+                    example: 1
+                  perPage:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 1
+              example:
+                items:
+                - id: 6
+                  userId: 2
+                  bookId: 2
+                  status: awaiting
+                  createdAt: '2026-10-12T12:00:00Z'
+                  arrivedAt: null
+                page: 1
+                perPage: 20
+                total: 1
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+    post:
+      tags:
+      - preorders
+      summary: Оформить предзаказ
+      description: Оформить предзаказ.
+      operationId: post_preorders
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса PreorderCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreorderCreate'
+            example:
+              bookId: 2
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preorder'
+              example:
+                id: 6
+                userId: 2
+                bookId: 2
+                status: awaiting
+                createdAt: '2026-10-12T12:00:00Z'
+                arrivedAt: null
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/preorders/{preorderId}:
+    delete:
+      tags:
+      - preorders
+      summary: Отменить предзаказ
+      description: Отменить предзаказ.
+      operationId: delete_preorders_preorderId
+      parameters:
+      - name: preorderId
+        in: path
+        required: true
+        description: Идентификатор предзаказа
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/subscriptions:
+    post:
+      tags:
+      - subscriptions
+      summary: Подписаться на новости издательства
+      description: Подписаться на новости издательства.
+      operationId: post_subscriptions
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        description: Тело запроса SubscriptionCreate
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreate'
+            example:
+              publisherId: 1
+              email: maria@example.com
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+              example:
+                id: 4
+                userId: 2
+                publisherId: 1
+                email: maria@example.com
+                createdAt: '2026-10-11T09:00:00Z'
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '409':
+          description: 'Конфликт: нарушена уникальность или бизнес-правило'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '409'
+                message: 'Конфликт: нарушена уникальность или бизнес-правило'
+                details: []
+        '422':
+          description: Ошибка валидации полей тела запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '422'
+                message: Ошибка валидации полей тела запроса
+                details: []
+        '429':
+          description: Превышена частота запросов (рассылка, webhook)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '429'
+                message: Превышена частота запросов (рассылка, webhook)
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+  /api/v1/subscriptions/{subscriptionId}:
+    delete:
+      tags:
+      - subscriptions
+      summary: Отписаться от рассылки
+      description: Отписаться от рассылки.
+      operationId: delete_subscriptions_subscriptionId
+      parameters:
+      - name: subscriptionId
+        in: path
+        required: true
+        description: Идентификатор подписки
+        schema:
+          type: integer
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: Ресурс удалён, тело ответа отсутствует
+        '400':
+          description: Некорректный JSON или неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '400'
+                message: Некорректный JSON или неверные параметры запроса
+                details: []
+        '401':
+          description: Отсутствует, истёк или недействителен JWT-токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '401'
+                message: Отсутствует, истёк или недействителен JWT-токен
+                details: []
+        '403':
+          description: Роль пользователя не имеет права на операцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '403'
+                message: Роль пользователя не имеет права на операцию
+                details: []
+        '404':
+          description: Ресурс или связанная сущность не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '404'
+                message: Ресурс или связанная сущность не найдены
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: '500'
+                message: Внутренняя ошибка сервера
+                details: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT-токен из POST /api/v1/auth/login
+    webhookSignature:
+      type: apiKey
+      in: header
+      name: X-Webhook-Signature
+      description: HMAC-SHA256 подпись тела webhook
+  schemas:
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+      example:
+        id: 1
+        name: manager
+        permissions:
+        - orders.change
+        - orders.view
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+      example:
+        id: 2
+        username: maria
+        email: maria@example.com
+        role: customer
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT-токен доступа
+        refreshToken:
+          type: string
+          description: JWT-токен обновления
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+      example:
+        accessToken: eyJhbGciOiJIUzI1NiJ9.access
+        refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+        tokenType: Bearer
+        expiresIn: 3600
+    Author:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        biography:
+          type: string
+      example:
+        id: 1
+        firstName: Роберт
+        lastName: Мартин
+        biography: Автор «Чистого кода».
+    Publisher:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+      example:
+        id: 1
+        name: Питер
+        address: Минск, ул. Примерная, 1
+    Topic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      example:
+        id: 1
+        name: Программирование
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        isbn:
+          type: string
+          description: ISBN-13 без дефисов
+        price:
+          type: number
+          format: double
+          description: Цена, BYN
+        rating:
+          type: number
+          format: double
+          description: Оценка 1–5 / средний рейтинг
+        availability:
+          type: string
+          enum:
+          - in_stock
+          - out_of_stock
+          - preorder
+        description:
+          type: string
+        authorId:
+          type: integer
+        publisherId:
+          type: integer
+        topicId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      example:
+        id: 1
+        title: Чистый код
+        isbn: '9780132350884'
+        price: 52.0
+        rating: 4.8
+        availability: in_stock
+        description: Руководство по написанию чистого кода.
+        authorId: 1
+        publisherId: 1
+        topicId: 1
+        createdAt: '2026-09-01T10:00:00Z'
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookId:
+          type: integer
+        userId:
+          type: integer
+        text:
+          type: string
+        rating:
+          type: integer
+          description: Оценка 1–5 / средний рейтинг
+        createdAt:
+          type: string
+          format: date-time
+        moderated:
+          type: boolean
+      example:
+        id: 7
+        bookId: 1
+        userId: 2
+        text: Полезная книга, рекомендую.
+        rating: 5
+        createdAt: '2026-10-05'
+        moderated: true
+    Cart:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        total:
+          type: number
+          format: double
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              bookId:
+                type: integer
+              quantity:
+                type: integer
+                description: Количество экземпляров (не менее 1)
+              price:
+                type: number
+                format: double
+                description: Цена, BYN
+      example:
+        id: 3
+        userId: 2
+        total: 84.5
+        items:
+        - id: 11
+          bookId: 1
+          quantity: 1
+          price: 52.0
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookId:
+          type: integer
+        quantity:
+          type: integer
+          description: Количество экземпляров (не менее 1)
+        price:
+          type: number
+          format: double
+          description: Цена, BYN
+      example:
+        id: 11
+        bookId: 1
+        quantity: 1
+        price: 52.0
+    Favorite:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        bookId:
+          type: integer
+        addedAt:
+          type: string
+      example:
+        id: 5
+        userId: 2
+        bookId: 1
+        addedAt: '2026-10-11'
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        publisherId:
+          type: integer
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+      example:
+        id: 4
+        userId: 2
+        publisherId: 1
+        email: maria@example.com
+        createdAt: '2026-10-11T09:00:00Z'
+    Preorder:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        bookId:
+          type: integer
+        status:
+          type: string
+          enum:
+          - awaiting
+          - arrived
+          - charged
+          - cancelled
+        createdAt:
+          type: string
+          format: date-time
+        arrivedAt:
+          type: string
+          nullable: true
+          format: date-time
+      example:
+        id: 6
+        userId: 2
+        bookId: 2
+        status: awaiting
+        createdAt: '2026-10-12T12:00:00Z'
+        arrivedAt: null
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        bookId:
+          type: integer
+        quantity:
+          type: integer
+          description: Количество экземпляров (не менее 1)
+        price:
+          type: number
+          format: double
+          description: Цена, BYN
+      example:
+        id: 21
+        orderId: 1024
+        bookId: 1
+        quantity: 1
+        price: 52.0
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        userId:
+          type: integer
+        address:
+          type: string
+        total:
+          type: number
+          format: double
+        status:
+          type: string
+          enum:
+          - pending_payment
+          - paid
+          - assembled
+          - in_delivery
+          - delivered
+          - cancelled
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              orderId:
+                type: integer
+              bookId:
+                type: integer
+              quantity:
+                type: integer
+                description: Количество экземпляров (не менее 1)
+              price:
+                type: number
+                format: double
+                description: Цена, BYN
+      example:
+        id: 1024
+        number: KM-1024
+        userId: 2
+        address: Минск, пр. Независимости, 4
+        total: 84.5
+        status: paid
+        createdAt: '2026-10-13T14:20:00Z'
+        items:
+        - id: 21
+          orderId: 1024
+          bookId: 1
+          quantity: 1
+          price: 52.0
+    StatusHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        status:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          type: integer
+      example:
+        id: 31
+        orderId: 1024
+        status: paid
+        changedAt: '2026-10-13T14:25:00Z'
+        changedBy: 3
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        amount:
+          type: number
+          format: double
+        method:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - confirmed
+          - declined
+        externalId:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+      example:
+        id: 9
+        orderId: 1024
+        amount: 84.5
+        method: card
+        status: confirmed
+        externalId: ps-8891
+        paidAt: '2026-10-13T14:25:00Z'
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              issue:
+                type: string
+      example:
+        code: validation_error
+        message: Неверные данные запроса
+        details:
+        - field: price
+          issue: Значение должно быть неотрицательным
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        phone:
+          type: string
+      example:
+        username: maria
+        email: maria@example.com
+        password: Str0ngPass!
+        phone: '+375291234567'
+      required:
+      - username
+      - email
+      - password
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      example:
+        username: maria
+        password: Str0ngPass!
+      required:
+      - username
+      - password
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: JWT-токен обновления
+      example:
+        refreshToken: eyJhbGciOiJIUzI1NiJ9.refresh
+      required:
+      - refreshToken
+    BookCreate:
+      type: object
+      properties:
+        title:
+          type: string
+        isbn:
+          type: string
+          description: ISBN-13 без дефисов
+        price:
+          type: number
+          format: double
+          description: Цена, BYN
+        availability:
+          type: string
+        description:
+          type: string
+        authorId:
+          type: integer
+        publisherId:
+          type: integer
+        topicId:
+          type: integer
+      example:
+        title: Чистый код
+        isbn: '9780132350884'
+        price: 52.0
+        availability: in_stock
+        description: Руководство по написанию чистого кода.
+        authorId: 1
+        publisherId: 1
+        topicId: 1
+      required:
+      - title
+      - isbn
+      - price
+      - authorId
+      - publisherId
+      - topicId
+    AuthorCreate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        biography:
+          type: string
+      example:
+        firstName: Роберт
+        lastName: Мартин
+        biography: Автор «Чистого кода».
+      required:
+      - firstName
+      - lastName
+    PublisherCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+      example:
+        name: Питер
+        address: Минск, ул. Примерная, 1
+      required:
+      - name
+    TopicCreate:
+      type: object
+      properties:
+        name:
+          type: string
+      example:
+        name: Программирование
+      required:
+      - name
+    ReviewCreate:
+      type: object
+      properties:
+        text:
+          type: string
+        rating:
+          type: integer
+          description: Оценка 1–5 / средний рейтинг
+      example:
+        text: Полезная книга, рекомендую.
+        rating: 5
+      required:
+      - text
+      - rating
+    ReviewModeration:
+      type: object
+      properties:
+        moderated:
+          type: boolean
+      example:
+        moderated: true
+      required:
+      - moderated
+    CartItemCreate:
+      type: object
+      properties:
+        bookId:
+          type: integer
+        quantity:
+          type: integer
+          description: Количество экземпляров (не менее 1)
+      example:
+        bookId: 1
+        quantity: 1
+      required:
+      - bookId
+      - quantity
+    CartItemUpdate:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          description: Количество экземпляров (не менее 1)
+      example:
+        quantity: 2
+      required:
+      - quantity
+    FavoriteCreate:
+      type: object
+      properties:
+        bookId:
+          type: integer
+      example:
+        bookId: 1
+      required:
+      - bookId
+    SubscriptionCreate:
+      type: object
+      properties:
+        publisherId:
+          type: integer
+        email:
+          type: string
+          format: email
+      example:
+        publisherId: 1
+        email: maria@example.com
+      required:
+      - publisherId
+    PreorderCreate:
+      type: object
+      properties:
+        bookId:
+          type: integer
+      example:
+        bookId: 2
+      required:
+      - bookId
+    OrderCreate:
+      type: object
+      properties:
+        address:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+          - card
+      example:
+        address: Минск, пр. Независимости, 4
+        paymentMethod: card
+      required:
+      - address
+      - paymentMethod
+    GuestOrderCreate:
+      type: object
+      properties:
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+        address:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+          - card
+      example:
+        contactEmail: olga@example.com
+        contactPhone: '+375291112233'
+        address: Гродно, ул. Советская, 8
+        paymentMethod: card
+      required:
+      - contactEmail
+      - address
+      - paymentMethod
+    OrderStatusUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - paid
+          - assembled
+          - in_delivery
+          - delivered
+          - cancelled
+      example:
+        status: assembled
+      required:
+      - status
+    PaymentInit:
+      type: object
+      properties:
+        method:
+          type: string
+          enum:
+          - card
+      example:
+        method: card
+      required:
+      - method
+    PaymentWebhook:
+      type: object
+      properties:
+        externalId:
+          type: string
+        orderId:
+          type: integer
+        status:
+          type: string
+          enum:
+          - confirmed
+          - declined
+        signature:
+          type: string
+          description: HMAC-подпись webhook
+      example:
+        externalId: ps-8891
+        orderId: 1024
+        status: confirmed
+        signature: sha256=9f2c...
+      required:
+      - externalId
+      - orderId
+      - status
+      - signature

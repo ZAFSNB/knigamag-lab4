@@ -1,0 +1,167 @@
+@startuml er_physical
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+skinparam dpi 170
+skinparam linetype ortho
+hide circle
+skinparam entity {
+  BackgroundColor #E7F0FA
+  BorderColor #1F3A5F
+}
+title Физическая ER-модель «КнигаМаг» (PostgreSQL 16)
+
+entity "users_role" as T01 {
+  * id : SERIAL <<PK>>
+  name : VARCHAR(30)
+  permissions : JSONB
+}
+entity "users_user" as T02 {
+  * id : SERIAL <<PK>>
+  username : VARCHAR(150)
+  password_hash : VARCHAR(255)
+  email : VARCHAR(254)
+  phone : VARCHAR(20)
+  role_id : INT <<FK>>
+  created_at : TIMESTAMPTZ
+}
+entity "users_refreshtoken" as T03 {
+  * id : SERIAL <<PK>>
+  user_id : INT <<FK>>
+  token_hash : VARCHAR(255)
+  expires_at : TIMESTAMPTZ
+  revoked : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+entity "catalog_author" as T04 {
+  * id : SERIAL <<PK>>
+  first_name : VARCHAR(100)
+  last_name : VARCHAR(100)
+  biography : TEXT
+}
+entity "catalog_publisher" as T05 {
+  * id : SERIAL <<PK>>
+  name : VARCHAR(200)
+  address : VARCHAR(255)
+}
+entity "catalog_topic" as T06 {
+  * id : SERIAL <<PK>>
+  name : VARCHAR(100)
+}
+entity "catalog_book" as T07 {
+  * id : SERIAL <<PK>>
+  title : VARCHAR(255)
+  isbn : VARCHAR(13)
+  price : NUMERIC(10,2)
+  rating : NUMERIC(3,2)
+  availability : VARCHAR(20)
+  description : TEXT
+  author_id : INT <<FK>>
+  publisher_id : INT <<FK>>
+  topic_id : INT <<FK>>
+  created_at : TIMESTAMPTZ
+}
+entity "catalog_review" as T08 {
+  * id : SERIAL <<PK>>
+  book_id : INT <<FK>>
+  user_id : INT <<FK>>
+  text : TEXT
+  rating : INT
+  created_at : DATE
+  moderated : BOOLEAN
+}
+entity "catalog_favorite" as T09 {
+  * id : SERIAL <<PK>>
+  user_id : INT <<FK>>
+  book_id : INT <<FK>>
+  added_at : DATE
+}
+entity "catalog_subscription" as T10 {
+  * id : SERIAL <<PK>>
+  user_id : INT <<FK>>
+  publisher_id : INT <<FK>>
+  email : VARCHAR(254)
+  created_at : TIMESTAMPTZ
+}
+entity "catalog_preorder" as T11 {
+  * id : SERIAL <<PK>>
+  user_id : INT <<FK>>
+  book_id : INT <<FK>>
+  status : VARCHAR(20)
+  created_at : TIMESTAMPTZ
+  arrived_at : TIMESTAMPTZ
+}
+entity "orders_cart" as T12 {
+  * id : SERIAL <<PK>>
+  user_id : INT <<FK>>
+  total : NUMERIC(10,2)
+}
+entity "orders_cartitem" as T13 {
+  * id : SERIAL <<PK>>
+  cart_id : INT <<FK>>
+  book_id : INT <<FK>>
+  quantity : INT
+}
+entity "orders_order" as T14 {
+  * id : SERIAL <<PK>>
+  number : VARCHAR(20)
+  user_id : INT <<FK>>
+  contact_email : VARCHAR(254)
+  contact_phone : VARCHAR(20)
+  address : VARCHAR(255)
+  total : NUMERIC(10,2)
+  status : VARCHAR(30)
+  created_at : TIMESTAMPTZ
+}
+entity "orders_orderitem" as T15 {
+  * id : SERIAL <<PK>>
+  order_id : INT <<FK>>
+  book_id : INT <<FK>>
+  quantity : INT
+  price : NUMERIC(10,2)
+}
+entity "orders_orderstatushistory" as T16 {
+  * id : SERIAL <<PK>>
+  order_id : INT <<FK>>
+  status : VARCHAR(30)
+  changed_at : TIMESTAMPTZ
+  changed_by : INT <<FK>>
+}
+entity "orders_payment" as T17 {
+  * id : SERIAL <<PK>>
+  order_id : INT <<FK>>
+  amount : NUMERIC(10,2)
+  method : VARCHAR(30)
+  status : VARCHAR(20)
+  external_id : VARCHAR(100)
+  paid_at : TIMESTAMPTZ
+}
+
+T01 -- T02
+T02 -- T03
+T04 -- T07
+T05 -- T07
+T06 -- T07
+T07 -- T08
+T02 -- T08
+T02 -- T09
+T07 -- T09
+T02 -- T10
+T05 -- T10
+T02 -- T11
+T07 -- T11
+T02 -- T12
+T12 -- T13
+T07 -- T13
+T02 -- T14
+T14 -- T15
+T07 -- T15
+T14 -- T16
+T02 -- T16
+T14 -- T17
+
+legend right
+  * — первичный ключ (PK), <<FK>> — внешний ключ
+  Префиксы catalog_ / orders_ / users_ — приложения Django
+  Имена связей перечислены в db/schema.sql
+endlegend
+@enduml

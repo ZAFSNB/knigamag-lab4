@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install pyyaml requests
+      - name: Validate OpenAPI specification
+        run: |
+          python - <<'PY'
+          import yaml, sys
+          spec = yaml.safe_load(open('api/openapi.yaml', encoding='utf-8'))
+          assert spec['openapi'] == '3.0.3', spec['openapi']
+          ops = [(m, p) for p, item in spec['paths'].items()
+                 for m in item if m in ('get','post','put','patch','delete')]
+          assert len(spec['paths']) == 31, len(spec['paths'])
+          assert len(ops) == 43, len(ops)
+          print('OpenAPI: %d paths, %d operations, %d schemas' % (
+              len(spec['paths']), len(ops), len(spec['components']['schemas'])))
+          PY
+      - name: Validate SQL schema
+        run: |
+          python - <<'PY'
+          s = open('db/schema.sql', encoding='utf-8').read()
+          assert s.count('CREATE TABLE') == 17
+          assert s.count('CREATE INDEX') == 17
+          assert s.count('(') == s.count(')')
+          assert 'BEGIN;' in s and 'COMMIT;' in s
+          print('SQL: 17 tables, 17 indexes, parentheses balanced')
+          PY
+      - name: Check that GitHub links are filled in
+        run: |
+          if grep -R '__OWNER__\|__REPO__' --include='*.md' --include='*.yml' --include='*.yaml' wiki docs README.md; then
+            echo 'Run scripts/publish_github.ps1 to substitute the owner/repo placeholders'; exit 1
+          fi
+          echo 'Links OK'
+      - name: Run Mock API tests
+        run: |
+          cd api
+          python test_mock.py
+      - name: Link integrity (docs + wiki)
+        run: |
+          python - <<'PY'
+          import glob, os, re
+          bad = []
+          for f in glob.glob('docs/*.md'):
+              for m in re.findall(r'!\[[^\]]*\]\(([^)]+)\)', open(f, encoding='utf-8').read()):
+                  if m.startswith('http'): continue
+                  if not os.path.exists(os.path.normpath(os.path.join('docs', m))):
+                      bad.append((f, m))
+          assert not bad, bad
+          print('docs images: all local links resolve')
+          PY
