@@ -1,7 +1,22 @@
 # Публикация проекта на GitHub
 
-Лабораторная работа № 4, группа 13 (задания 1–4). Репозиторий уже подготовлен:
-осталось создать удалённый репозиторий, включить Pages и загрузить Wiki.
+Лабораторная работа № 4, группа 13 (задания 1–4).
+Целевой репозиторий: **https://github.com/ZAFSNB/knigamag-lab4/** (public).
+Локальный репозиторий уже инициализирован и содержит коммиты; осталось создать
+удалённый репозиторий, включить Pages и загрузить Wiki.
+
+## Готовая команда
+
+```powershell
+winget install --id GitHub.cli                     # один раз, затем перезапустить терминал
+gh auth login --web --git-protocol https           # авторизация в браузере
+powershell -ExecutionPolicy Bypass -File scripts\publish_github.ps1 -Owner ZAFSNB -Repo knigamag-lab4 -Visibility public
+```
+
+Сценарий создаст репозиторий, отправит код, включит Pages из `main:/docs`
+и загрузит 7 страниц Wiki. Если Wiki ещё не создавалась, он выведет подсказку:
+нужно один раз открыть `https://github.com/ZAFSNB/knigamag-lab4/wiki`, создать
+страницу Home и запустить сценарий повторно.
 
 ## Что уже есть в репозитории
 
@@ -14,41 +29,36 @@
 | `.github/workflows/ci.yml` | проверка OpenAPI, SQL, ссылок и 18 Mock-тестов при каждом push |
 | `scripts/publish_github.ps1` | сценарий публикации (репозиторий + Pages + Wiki) |
 
-Ссылки в `wiki/` и `docs/` используют заполнители `__OWNER__` и `__REPO__`.
-Сценарий публикации заменяет их на реальные значения.
+Ссылки в `wiki/` и `docs/` уже содержат адрес `ZAFSNB/knigamag-lab4`.
+Если репозиторий будет переименован, измените константы `REPO_OWNER` / `REPO_NAME`
+в `gen_lab4.py` и перегенерируйте проект; сценарий публикации дополнительно
+умеет заменять устаревшие заполнители `__OWNER__` / `__REPO__`.
 
 ## Вариант А. Один сценарий (рекомендуется)
 
 1. Установить [GitHub CLI](https://cli.github.com/) (или `winget install --id GitHub.cli`)
    и перезапустить терминал.
-2. Выполнить в корне репозитория:
-
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File scripts\publish_github.ps1 -Owner ВАШ_ЛОГИН -Repo knigamag-lab4
-   ```
-
-   Сценарий при необходимости откроет браузер для `gh auth login`.
-3. Если Wiki ещё не создавалась: открыть `https://github.com/ВАШ_ЛОГИН/knigamag-lab4/wiki`,
+2. Выполнить в корне репозитория команду из раздела «Готовая команда» выше.
+   При отсутствии авторизации сценарий сам откроет браузер для `gh auth login`.
+3. Если Wiki ещё не создавалась: открыть `https://github.com/ZAFSNB/knigamag-lab4/wiki`,
    нажать **Create the first page**, сохранить `Home`, затем запустить сценарий повторно —
    он загрузит все 7 страниц.
 
 ## Вариант Б. Вручную
 
 1. `Settings → Pages → Build and deployment`: **Deploy from a branch**,
-   branch `main`, folder `/docs`, **Save**. Сайт: `https://ВАШ_ЛОГИН.github.io/РЕПОЗИТОРИЙ/`.
+   branch `main`, folder `/docs`, **Save**. Сайт: `https://ZAFSNB.github.io/knigamag-lab4/`.
 2. `Settings → Pages` не требует workflow: Jekyll сам применит `docs/_config.yml`
    (тема `jekyll-theme-cayman`).
 3. Wiki: создать первую страницу в веб-интерфейсе, затем клонировать
-   `https://github.com/ВАШ_ЛОГИН/РЕПОЗИТОРИЙ.wiki.git`, скопировать туда `wiki/*.md`,
+   `https://github.com/ZAFSNB/knigamag-lab4.wiki.git`, скопировать туда `wiki/*.md`,
    сделать commit и push. Имена файлов — это имена страниц wiki.
-4. Перед ручной загрузкой замените `__OWNER__` / `__REPO__` на свои значения
-   в `README.md`, `wiki/*.md`, `docs/*.md` (исключая `.github/workflows/ci.yml`,
-   `PUBLISHING.md` и сам сценарий — в них заполнители должны остаться),
-   иначе ссылки и проверка CI не пройдут.
+4. Ссылки уже заполнены, дополнительных правок перед загрузкой не требуется.
 
 ## После публикации
 
-- **Pages**: `https://ВАШ_ЛОГИН.github.io/РЕПОЗИТОРИЙ/` (сборка 1–2 минуты).
+- **Репозиторий**: `https://github.com/ZAFSNB/knigamag-lab4`
+- **Pages**: `https://ZAFSNB.github.io/knigamag-lab4/` (сборка 1–2 минуты).
 - **Wiki**: 7 страниц — Home, Functional-Requirements, Application-File-Diagram,
   Additional-Specification, Database-Schema, Project-API, Project-Presentation.
 - **CI**: вкладка Actions, workflow `CI` — 18/18 Mock-тестов, 31 path / 43 операции
