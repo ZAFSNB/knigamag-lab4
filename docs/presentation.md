@@ -36,14 +36,14 @@ US-1…US-16 · UC-1…UC-16 · ФТ-1…ФТ-12 + API-1…API-8.
 ## Слайд 5. База данных
 
 17 таблиц, PostgreSQL 16, [ER-диаграмма](assets/er_physical.png),
-[schema.sql](https://github.com/__OWNER__/__REPO__/blob/main/db/schema.sql).
+[schema.sql](https://github.com/ZAFSNB/knigamag-lab4/blob/main/db/schema.sql).
 
 ---
 
 ## Слайд 6. API
 
-43 конечных точек, OpenAPI 3.0.3, JWT + HMAC, [openapi.yaml](https://github.com/__OWNER__/__REPO__/blob/main/api/openapi.yaml),
-[результаты тестов](https://github.com/__OWNER__/__REPO__/blob/main/api/mock_test_results.md).
+43 конечных точек, OpenAPI 3.0.3, JWT + HMAC, [openapi.yaml](https://github.com/ZAFSNB/knigamag-lab4/blob/main/api/openapi.yaml),
+[результаты тестов](https://github.com/ZAFSNB/knigamag-lab4/blob/main/api/mock_test_results.md).
 
 ---
 

@@ -1,10 +1,10 @@
 # Диаграмма файлов приложения
 
-![Диаграмма файлов](https://raw.githubusercontent.com/__OWNER__/__REPO__/main/assets/application_files.png)
+![Диаграмма файлов](https://raw.githubusercontent.com/ZAFSNB/knigamag-lab4/main/assets/application_files.png)
 
 **Структура репозитория «КнигаМаг»**
 
-Исходный код диаграммы: [application_files.puml](https://raw.githubusercontent.com/__OWNER__/__REPO__/main/assets/application_files.puml).
+Исходный код диаграммы: [application_files.puml](https://raw.githubusercontent.com/ZAFSNB/knigamag-lab4/main/assets/application_files.puml).
 
 | Каталог / файл | Назначение |
 | --- | --- |

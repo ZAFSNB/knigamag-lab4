@@ -1,6 +1,6 @@
 # Презентация проекта
 
-Материалы презентации: [presentation.md](https://github.com/__OWNER__/__REPO__/wiki/Project-Presentation) — титул,
+Материалы презентации: [presentation.md](https://github.com/ZAFSNB/knigamag-lab4/wiki/Project-Presentation) — титул,
 распределение задач, требования, схема базы данных, организация репозитория,
 результаты заданий 1–4.
 

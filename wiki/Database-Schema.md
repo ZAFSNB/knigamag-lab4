@@ -3,13 +3,13 @@
 Логическая ER-модель лабораторной работы № 3 уточнена до 17 таблиц и
 реализована для **PostgreSQL 16**.
 
-![Физическая ER-диаграмма](https://raw.githubusercontent.com/__OWNER__/__REPO__/main/assets/er_physical.png)
+![Физическая ER-диаграмма](https://raw.githubusercontent.com/ZAFSNB/knigamag-lab4/main/assets/er_physical.png)
 
 **Физическая ER-диаграмма «КнигаМаг» (PK/FK, типы PostgreSQL)**
 
-- [Логическая схема: Сущность / Таблица БД / Поле / Описание / Тип данных](https://github.com/__OWNER__/__REPO__/blob/main/db/logical-model.md)
-- [SQL-файл физической модели: schema.sql](https://github.com/__OWNER__/__REPO__/blob/main/db/schema.sql)
-- [Исходный код диаграммы: er_physical.puml](https://raw.githubusercontent.com/__OWNER__/__REPO__/main/assets/er_physical.puml)
+- [Логическая схема: Сущность / Таблица БД / Поле / Описание / Тип данных](https://github.com/ZAFSNB/knigamag-lab4/blob/main/db/logical-model.md)
+- [SQL-файл физической модели: schema.sql](https://github.com/ZAFSNB/knigamag-lab4/blob/main/db/schema.sql)
+- [Исходный код диаграммы: er_physical.puml](https://raw.githubusercontent.com/ZAFSNB/knigamag-lab4/main/assets/er_physical.puml)
 
 Изменения относительно ЛР 3: добавлены `catalog_preorder` (ФТ-6),
 `orders_orderstatushistory` (US-8) и `users_refreshtoken` (UC-11, UC-14);

@@ -7,8 +7,8 @@
 
 **Физическая ER-диаграмма «КнигаМаг» (PK/FK, типы PostgreSQL)**
 
-- [Логическая схема: Сущность / Таблица БД / Поле / Описание / Тип данных](https://github.com/__OWNER__/__REPO__/blob/main/db/logical-model.md)
-- [SQL-файл физической модели: schema.sql](https://github.com/__OWNER__/__REPO__/blob/main/db/schema.sql)
+- [Логическая схема: Сущность / Таблица БД / Поле / Описание / Тип данных](https://github.com/ZAFSNB/knigamag-lab4/blob/main/db/logical-model.md)
+- [SQL-файл физической модели: schema.sql](https://github.com/ZAFSNB/knigamag-lab4/blob/main/db/schema.sql)
 - [Исходный код диаграммы: er_physical.puml](assets/er_physical.puml)
 
 Изменения относительно ЛР 3: добавлены `catalog_preorder` (ФТ-6),

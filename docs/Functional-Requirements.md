@@ -22,8 +22,8 @@ webhook оплаты, единый формат ошибок, справочни
 ## Модель требований и реестр вариантов использования
 
 Полная модель «Актор → User Story → Use Case» (US-1…US-16) —
-[requirements-model.md](https://github.com/__OWNER__/__REPO__/blob/main/requirements/requirements-model.md);
-реестр UC-1…UC-16 — [use-case-registry.md](https://github.com/__OWNER__/__REPO__/blob/main/requirements/use-case-registry.md).
+[requirements-model.md](https://github.com/ZAFSNB/knigamag-lab4/blob/main/requirements/requirements-model.md);
+реестр UC-1…UC-16 — [use-case-registry.md](https://github.com/ZAFSNB/knigamag-lab4/blob/main/requirements/use-case-registry.md).
 
 ![Диаграмма вариантов использования](assets/uc_diagram.png)
 

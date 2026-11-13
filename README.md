@@ -17,7 +17,7 @@ HTTP-ответов, а также локальный Mock-сервер с ав�
 # Installation
 
 ```bash
-git clone https://github.com/__OWNER__/__REPO__.git knigamag
+git clone https://github.com/ZAFSNB/knigamag-lab4.git knigamag
 cd knigamag
 python -m venv .venv && .venv\Scripts\activate     # Windows
 # pip install -r requirements.txt   # появится вместе с backend-кодом (задание 6)
