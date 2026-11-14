@@ -51,8 +51,6 @@ python -m http.server 8000 --directory docs            # локальный пр
 3. Выполните примеры из [api/requests.md](api/requests.md) против Mock-сервера.
 4. Для создания схемы БД примените [db/schema.sql](db/schema.sql) к PostgreSQL 16.
 5. Сайт GitHub Pages собирается из каталога `docs/` (структура повторяет wiki).
-6. Порядок публикации на GitHub (репозиторий, Pages, Wiki) — в
-   [PUBLISHING.md](PUBLISHING.md); автоматическая проверка — `.github/workflows/ci.yml`.
 
 # Contributing
 

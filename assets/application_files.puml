@@ -1,8 +1,6 @@
 @startmindmap
 * КнигаМаг (репозиторий)
-** README.md, PUBLISHING.md, .gitignore
-** .github/workflows/ci.yml
-** scripts/publish_github.ps1
+** README.md, .gitignore
 ** requirements/
 *** requirements-model.md, use-case-registry.md
 ** db/
